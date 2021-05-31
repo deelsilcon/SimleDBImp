@@ -10,9 +10,6 @@ import simpledb.transaction.TransactionId;
 import java.io.*;
 import java.util.*;
 
-import java.io.*;
-import java.util.*;
-
 /**
  * HeapFile is an implementation of a DbFile that stores a collection of tuples
  * in no particular order. Tuples are stored on pages, each of which is a fixed
@@ -190,7 +187,7 @@ public class HeapFile implements DbFile {
                 return true;
             } else {
                 while (!it.hasNext()) {
-                    if (++cur == heapFile.numPages()) {
+                    if (++cur >= heapFile.numPages()) {
                         return false;
                     } else {
                         it = getTuplesInPage(cur);
