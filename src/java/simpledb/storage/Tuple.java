@@ -93,6 +93,19 @@ public class Tuple implements Serializable {
         return sb.toString();
     }
 
+    @Override
+    public int hashCode() {
+        return tupleDesc.hashCode() + fieldList.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Tuple)) {
+            return false;
+        }
+        return this.tupleDesc.equals(((Tuple) obj).tupleDesc) && this.fieldList.equals(((Tuple) obj).fieldList);
+    }
+
     /**
      * @return An iterator which iterates over all the fields of this tuple
      */

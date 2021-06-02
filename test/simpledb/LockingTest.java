@@ -38,6 +38,7 @@ public class LockingTest extends TestUtil.CreateHeapFile {
     TransactionId tid = new TransactionId();
     for (int i = 0; i < 1025; ++i) {
       empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
+//      System.out.println(i);
     }
 
     // if this fails, complain to the TA

@@ -244,5 +244,4 @@ public class TupleDesc implements Serializable {
         }
         return names;
     }
-
 }

@@ -121,15 +121,16 @@ public class HeapFile implements DbFile {
             }
         }
         //2. Create a new page
-//        System.out.println("Created an new Page!");
-        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file, true));
-        byte[] data = HeapPage.createEmptyPageData();
-        bos.write(data);
-        bos.close();
+        synchronized (this){
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file, true));
+            byte[] data = HeapPage.createEmptyPageData();
+            bos.write(data);
+            bos.close();
 
-        HeapPage hp = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(getId(), numPages() - 1), Permissions.READ_WRITE);
-        hp.insertTuple(t);
-        pages.add(hp);
+            HeapPage hp = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(getId(), numPages() - 1), Permissions.READ_WRITE);
+            hp.insertTuple(t);
+            pages.add(hp);
+        }
         return pages;
     }
 

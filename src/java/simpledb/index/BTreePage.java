@@ -63,6 +63,7 @@ public abstract class BTreePage implements Page {
 	/**
 	 * @return the PageId associated with this page.
 	 */
+	@Override
 	public BTreePageId getId() {
 		return pid;
 	}
@@ -119,7 +120,8 @@ public abstract class BTreePage implements Page {
 	 * Marks this page as dirty/not dirty and record that transaction
 	 * that did the dirtying
 	 */
-	public void markDirty(boolean dirty, TransactionId tid) {
+	@Override
+    public void markDirty(boolean dirty, TransactionId tid) {
 		this.dirty = dirty;
 		if (dirty) this.dirtier = tid;
 	}
@@ -127,6 +129,7 @@ public abstract class BTreePage implements Page {
 	/**
 	 * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
 	 */
+	@Override
 	public TransactionId isDirty() {
 		if (this.dirty)
 			return this.dirtier;

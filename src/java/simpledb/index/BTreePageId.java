@@ -49,6 +49,7 @@ public class BTreePageId implements PageId {
 	}
 
 	/** @return the table associated with this PageId */
+	@Override
 	public int getTableId() {
 		return tableId;
 	}
@@ -106,7 +107,8 @@ public class BTreePageId implements PageId {
 	 *  number of integers that corresponds to number of args to one of the
 	 *  constructors.
 	 */
-	public int[] serialize() {
+	@Override
+    public int[] serialize() {
 		int[] data = new int[3];
 
 		data[0] = tableId;

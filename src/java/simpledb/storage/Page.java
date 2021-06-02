@@ -1,5 +1,6 @@
 package simpledb.storage;
 
+import simpledb.transaction.ReadWriteLock;
 import simpledb.transaction.TransactionId;
 
 /**
@@ -13,7 +14,6 @@ import simpledb.transaction.TransactionId;
  *     Page(PageId id, byte[] data)
  */
 public interface Page {
-
     /**
      * Return the id of this page.  The id is a unique identifier for a page
      * that can be used to look up the page on disk or determine if the page
