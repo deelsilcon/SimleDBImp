@@ -36,6 +36,9 @@ public class DependencyGraph {
     }
 
     public void addEdge(long v, long w) {
+        if(v == w){
+            return;
+        }
         adj.computeIfAbsent(w, k -> new ArrayList<>());
         adj.computeIfAbsent(v, k -> new ArrayList<>());
         adj.get(v).add(w);
@@ -65,7 +68,7 @@ public class DependencyGraph {
                 if (hasCycle) {
                     return true;
                 }
-                if (!marked.get(key)) {
+                if (!marked.getOrDefault(key, true)) {
                     dfs(key);
                 }
             }
@@ -74,11 +77,13 @@ public class DependencyGraph {
     }
 
     public void reset() {
-        this.edgeCnt = 0;
-        hasCycle = false;
-        adj.clear();
-        marked.clear();
-        onStack.clear();
+        synchronized (this) {
+            this.edgeCnt = 0;
+            hasCycle = false;
+            adj.clear();
+            marked.clear();
+            onStack.clear();
+        }
     }
 
     private void initState() {
@@ -95,7 +100,7 @@ public class DependencyGraph {
         for (Long w : getAdjacent(v)) {
             if (hasCycle) {
                 return;
-            } else if (!marked.get(w)) {
+            } else if (!marked.getOrDefault(w, true)) {
                 dfs(w);
             } else if (onStack.get(w)) {
                 hasCycle = true;

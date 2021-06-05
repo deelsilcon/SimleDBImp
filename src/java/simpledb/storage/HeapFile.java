@@ -111,9 +111,9 @@ public class HeapFile implements DbFile {
             throws DbException, IOException, TransactionAbortedException {
         List<Page> pages = new ArrayList<>();
         //1. Try to find empty slot from existed page
-
+        BufferPool bp = Database.getBufferPool();
         for (int i = 0; i < numPages(); ++i) {
-            HeapPage hp = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(getId(), i), Permissions.READ_WRITE);
+            HeapPage hp = (HeapPage) bp.getPage(tid, new HeapPageId(getId(), i), Permissions.READ_WRITE);
             if (hp.getNumEmptySlots() != 0) {
                 hp.insertTuple(t);
                 pages.add(hp);
@@ -127,7 +127,7 @@ public class HeapFile implements DbFile {
             bos.write(data);
             bos.close();
 
-            HeapPage hp = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(getId(), numPages() - 1), Permissions.READ_WRITE);
+            HeapPage hp = (HeapPage) bp.getPage(tid, new HeapPageId(getId(), numPages() - 1), Permissions.READ_WRITE);
             hp.insertTuple(t);
             pages.add(hp);
         }

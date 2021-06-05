@@ -42,7 +42,6 @@ public class BufferPool {
     private final int numOfPages;
 
     private final ConcurrentMap<PageId, Page> page_map;
-    //    private int age;
     private final LockManager lockManager;
 
 
@@ -55,7 +54,6 @@ public class BufferPool {
         this.numOfPages = numPages;
 //        page_map = Collections.synchronizedMap((new LinkedHashMap<>(numPages, 0.75f, true)));
         this.page_map = new ConcurrentHashMap<>();
-//        this.age = 0;
         this.lockManager = new LockManager();
     }
 
@@ -90,14 +88,14 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        LockType type = (perm == Permissions.READ_WRITE ? LockType.WriteLock : LockType.ReadLock);
-        if (lockManager.processConflict(pid, tid, type)) {
-            lockManager.resetDg();
-            throw new TransactionAbortedException();
+        try {
+            lockManager.acquireLock(tid, pid, perm);
+        } catch (DeadlockException e) {
+            throw new TransactionAbortedException(); // caught by callee,
+            // who calls transactionComplete()
         }
-        lockManager.acquireLock(pid, tid, type);
         if (!page_map.containsKey(pid)) {
-            if (page_map.size() > numOfPages) {
+            if (page_map.size() >= numOfPages) {
                 evictPage();
             }
             DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
@@ -117,7 +115,7 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public void unsafeReleasePage(TransactionId tid, PageId pid) {
-        lockManager.releaseLock(pid, tid);
+        lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -132,8 +130,8 @@ public class BufferPool {
     /**
      * Return true if the specified transaction has a lock on the specified page
      */
-    public boolean holdsLock(TransactionId tid, PageId p) {
-        return lockManager.holdsLock(p, tid);
+    public boolean holdsLock(TransactionId tid, PageId pid) {
+        return lockManager.holdsLock(tid, pid);
     }
 
     /**
@@ -144,20 +142,12 @@ public class BufferPool {
      * @param commit a flag indicating whether we should commit or abort
      */
     public void transactionComplete(TransactionId tid, boolean commit) {
-        List<ReadWriteLock> locks = lockManager.getTransactionLocks(tid);
-        if (locks == null) {
-            return;
-        }
-        int sz = locks.size();
-        for (int i = sz - 1; i >= 0; --i) {
-            ReadWriteLock lock = locks.get(i);
-            lockManager.releaseLock(lock.getPid(), tid);
-        }
         if (commit) {
             flushPages(tid);
         } else {
             restorePages(tid);
         }
+        lockManager.releaseAllLocks(tid);
     }
 
     /**
@@ -178,7 +168,15 @@ public class BufferPool {
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
             throws DbException, TransactionAbortedException, IOException {
         DbFile file = Database.getCatalog().getDatabaseFile(tableId);
-        updatePage(file.insertTuple(tid, t), tid);
+        List<Page> pages = file.insertTuple(tid, t);
+        for (Page p : pages) {
+            p.markDirty(true, tid);
+            page_map.put(p.getId(), p);
+        }
+        //Since we insert the page, we may need to evict a page from buffer pool if necessary
+        if (page_map.size() > numOfPages) {
+            evictPage();
+        }
     }
 
     /**
@@ -197,9 +195,8 @@ public class BufferPool {
     public void deleteTuple(TransactionId tid, Tuple t)
             throws DbException, TransactionAbortedException {
         DbFile file = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
-        List<Page> pages = null;
         try {
-            pages = file.deleteTuple(tid, t);
+            List<Page> pages = file.deleteTuple(tid, t);
             for (Page p : pages) {
                 p.markDirty(true, tid);
             }
@@ -276,24 +273,15 @@ public class BufferPool {
                 break;
             }
         }
+        if(pageToEvict == null){
+            throw new DbException("No page can be evicted!");
+        }
         try {
-            assert pageToEvict != null;
             flushPage(pageToEvict.getId());
         } catch (IOException e) {
             e.printStackTrace();
         }
         discardPage(pageToEvict.getId());
-    }
-
-    private void updatePage(List<Page> pages, TransactionId tid) throws DbException {
-        for (Page p : pages) {
-            p.markDirty(true, tid);
-            //Since we update the page, we may need to evict a page from buffer pool if necessary
-            if (page_map.size() > numOfPages) {
-                evictPage();
-            }
-            page_map.put(p.getId(), p);
-        }
     }
 
     private synchronized void restorePages(TransactionId tid) {
@@ -309,9 +297,4 @@ public class BufferPool {
             }
         }
     }
-
-    private boolean checkNoBufferPoolState(TransactionId tid){
-        return lockManager.getTransactionLocks(tid) == null;
-    }
-
 }

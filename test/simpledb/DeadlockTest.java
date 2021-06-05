@@ -210,8 +210,12 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
             Thread.sleep(POLL_INTERVAL);
 
             assertFalse(lg1Write.acquired() && lg2Write.acquired());
-            if (lg1Write.acquired() && !lg2Write.acquired()) break;
-            if (!lg1Write.acquired() && lg2Write.acquired()) break;
+            if (lg1Write.acquired() && !lg2Write.acquired()) {
+                break;
+            }
+            if (!lg1Write.acquired() && lg2Write.acquired()) {
+                break;
+            }
 
             if (lg1Write.getError() != null) {
                 lg1Read.stop();

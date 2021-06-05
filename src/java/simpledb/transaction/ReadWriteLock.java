@@ -11,8 +11,6 @@ import java.util.List;
  */
 public class ReadWriteLock {
     private PageId pid;
-    private List<TransactionId> rTids;
-    private TransactionId wTid;
     private int writingCount;
     private int readingCount;
     private int waitWriter;
@@ -24,9 +22,7 @@ public class ReadWriteLock {
 
     public ReadWriteLock(boolean preferWriter, PageId pid) {
         this.preferWriter = preferWriter;
-        this.wTid = null;
         this.pid = pid;
-        this.rTids = new ArrayList<>();
     }
 
     public synchronized void readLock() {
@@ -81,25 +77,5 @@ public class ReadWriteLock {
 
     public boolean isLockHoldByOneReader() {
         return writingCount == 0 && readingCount == 1;
-    }
-
-    public List<TransactionId> getRTids() {
-        return rTids;
-    }
-
-    public void addRTids(TransactionId rTid) {
-        this.rTids.add(rTid);
-    }
-
-    public void removeRtid(TransactionId rTid) {
-        this.rTids.remove(rTid);
-    }
-
-    public TransactionId getwTid() {
-        return wTid;
-    }
-
-    public void setwTid(TransactionId wTid) {
-        this.wTid = wTid;
     }
 }

@@ -1,6 +1,5 @@
 package simpledb.storage;
 
-import simpledb.transaction.ReadWriteLock;
 import simpledb.transaction.TransactionId;
 
 /**

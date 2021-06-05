@@ -250,16 +250,15 @@ public class HeapPage implements Page {
      *                     already empty.
      */
     public void deleteTuple(Tuple t) throws DbException {
-        int tid = t.getRecordId().getTupleNumber();
-        if (tuples[tid] == null) {
+        int i = t.getRecordId().getTupleNumber();
+        if (tuples[i] == null) {
             throw new DbException("tuple does not exist");
         }
-        if (!isSlotUsed(tid)) {
+        if (!isSlotUsed(i)) {
             throw new DbException("The corresponding slot is already empty!");
         }
-        markSlotUsed(tid, false);
-        tuples[tid] = null;
-
+        markSlotUsed(i, false);
+        tuples[i] = null;
     }
 
     /**
