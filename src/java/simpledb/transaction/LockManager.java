@@ -54,14 +54,9 @@ public class LockManager {
     public boolean acquireLock(TransactionId tid, PageId pid, Permissions perm)
             throws DeadlockException {
         boolean ifAdded = addToWaitForGraph(tid, pid, perm);
-//        long start = System.currentTimeMillis();
         while (!lock(tid, pid, perm)) {
             // keep trying to get the lock
-
             synchronized (this) {
-//                if(System.currentTimeMillis() - start > LOCK_TIME_OUT){
-//                    throw new DeadlockException();
-//                }
                 if (ifAdded){
                     throw new DeadlockException();
                 }
@@ -78,7 +73,6 @@ public class LockManager {
         synchronized (this) {
             removeFromWaitForGraph(tid, pid, ifAdded);
         }
-
         return true;
     }
 
