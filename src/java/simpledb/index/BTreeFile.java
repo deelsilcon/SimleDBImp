@@ -441,7 +441,6 @@ public class BTreeFile implements DbFile {
             p = (BTreePage) getPage(tid, dirtypages, child, Permissions.READ_WRITE);
             p.setParentId(pid);
         }
-
     }
 
     /**

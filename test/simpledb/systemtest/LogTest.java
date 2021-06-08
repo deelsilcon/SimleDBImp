@@ -27,7 +27,7 @@ public class LogTest extends SimpleDbTestBase {
     HeapFile hf2;
 
     void insertRow(HeapFile hf, Transaction t, int v1)
-        throws DbException, TransactionAbortedException {
+            throws DbException, TransactionAbortedException {
         // Create a row to insert
         TupleDesc twoIntColumns = Utility.getTupleDesc(2);
         Tuple value = new Tuple(twoIntColumns);
@@ -47,7 +47,7 @@ public class LogTest extends SimpleDbTestBase {
 
     // check that the specified tuple is, or is not, present
     void look(HeapFile hf, Transaction t, int v1, boolean present)
-        throws DbException, TransactionAbortedException {
+            throws DbException, TransactionAbortedException {
         int count = 0;
         SeqScan scan = new SeqScan(t.getId(), hf.getId(), "");
         scan.open();
@@ -68,24 +68,29 @@ public class LogTest extends SimpleDbTestBase {
 
     // insert tuples
     void doInsert(HeapFile hf, int t1, int t2)
-        throws DbException, TransactionAbortedException, IOException {
+            throws DbException, TransactionAbortedException, IOException {
         Transaction t = new Transaction();
         t.start();
         if(t1 != -1)
             insertRow(hf, t, t1);
-        Database.getBufferPool().flushAllPages();
-        if(t2 != -1)
+        if(t2 != -1) {
+            Database.getBufferPool().flushAllPages();
+        } else  {
+            Database.getBufferPool().flushPagesWithUpdate();
+        }
+        if(t2 != -1) {
             insertRow(hf, t, t2);
+        }
         t.commit();
     }
 
     void abort(Transaction t)
-        throws IOException {
+            throws IOException {
         // t.transactionComplete(true); // abort
         Database.getBufferPool().flushAllPages(); // XXX defeat NO-STEAL-based abort
         Database.getLogFile().logAbort(t.getId()); // does rollback too
         Database.getBufferPool().flushAllPages(); // prevent NO-STEAL-based abort from
-                                                  // un-doing the rollback
+        // un-doing the rollback
         Database.getBufferPool().transactionComplete(t.getId(), false); // release locks
     }
 
@@ -93,7 +98,7 @@ public class LogTest extends SimpleDbTestBase {
     // force dirty pages to disk, defeating NO-STEAL
     // abort
     void dontInsert(HeapFile hf, int t1)
-        throws DbException, TransactionAbortedException, IOException {
+            throws DbException, TransactionAbortedException, IOException {
         Transaction t = new Transaction();
         t.start();
         if(t1 != -1)
@@ -111,7 +116,7 @@ public class LogTest extends SimpleDbTestBase {
     // restart Database
     // run log recovery
     void crash()
-        throws IOException {
+            throws IOException {
         Database.reset();
         hf1 = Utility.openHeapFile(2, file1);
         hf2 = Utility.openHeapFile(2, file2);
@@ -151,11 +156,11 @@ public class LogTest extends SimpleDbTestBase {
         Transaction t1 = new Transaction();
         t1.start();
         Page p = Database.getBufferPool().getPage(t1.getId(),
-                                                  new HeapPageId(hf1.getId(), 0),
-                                                  Permissions.READ_ONLY);
+                new HeapPageId(hf1.getId(), 0),
+                Permissions.READ_ONLY);
         Page p1 = p.getBeforeImage();
         boolean same = Arrays.equals(p.getPageData(),
-                                     p1.getPageData());
+                p1.getPageData());
         if(!same)
             throw new RuntimeException("LogTest:setBeforeImage() not called? patch failed?");
     }
@@ -308,6 +313,7 @@ public class LogTest extends SimpleDbTestBase {
 
         crash();
 
+        Database.getLogFile().print();
         t = new Transaction();
         t.start();
         look(hf1, t, 1, true);

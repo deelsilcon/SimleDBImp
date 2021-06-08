@@ -143,10 +143,21 @@ public class BufferPool {
      */
     public void transactionComplete(TransactionId tid, boolean commit) {
         if (commit) {
-            flushPages(tid);
-        } else {
-            restorePages(tid);
+            for (PageId pid : page_map.keySet()) {
+                Page page = page_map.get(pid);
+                if (tid.equals(page.isDirty())) {
+                    try {
+                        flushPage(pid);
+                        page.setBeforeImage();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
+//        else {
+//            restorePages(tid);
+//        }
         lockManager.releaseAllLocks(tid);
     }
 
@@ -212,10 +223,25 @@ public class BufferPool {
      */
     public synchronized void flushAllPages() {
         for (Page page : page_map.values()) {
-            try {
-                flushPage(page.getId());
-            } catch (IOException e) {
-                e.printStackTrace();
+            if(page.isDirty() != null){
+                try {
+                    flushPage(page.getId());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public synchronized void flushPagesWithUpdate(){
+        for (Page page : page_map.values()) {
+            if(page.isDirty() != null){
+                try {
+                    flushPage(page.getId());
+                    page.setBeforeImage();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -238,6 +264,13 @@ public class BufferPool {
     private synchronized void flushPage(PageId pid) throws IOException {
         Page page = page_map.get(pid);
         if (page.isDirty() != null) {
+//             append an update record to the log, with
+//             a before-image and after-image.
+            TransactionId dirtier = page.isDirty();
+            if (dirtier != null){
+                Database.getLogFile().logWrite(dirtier, page.getBeforeImage(), page);
+                Database.getLogFile().force();
+            }
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(page);
             //mark that page as not dirty
             page.markDirty(false, null);
@@ -250,9 +283,10 @@ public class BufferPool {
     public synchronized void flushPages(TransactionId tid) {
         for (PageId pid : page_map.keySet()) {
             Page page = page_map.get(pid);
-            if (page.isDirty() == tid) {
+            if (tid.equals(page.isDirty())) {
                 try {
                     flushPage(pid);
+                    page.setBeforeImage();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -284,17 +318,21 @@ public class BufferPool {
         discardPage(pageToEvict.getId());
     }
 
-    private synchronized void restorePages(TransactionId tid) {
-        for (PageId pid : page_map.keySet()) {
-            Page page = page_map.get(pid);
+//    private synchronized void restorePages(TransactionId tid) {
+//        for (PageId pid : page_map.keySet()) {
+//            Page page = page_map.get(pid);
+//
+//            //dirty because of this aborted transaction, we need to read those pages back from disk
+//            if (page.isDirty() == tid) {
+//                int tableId = pid.getTableId();
+//                DbFile file = Database.getCatalog().getDatabaseFile(tableId);
+//                Page originPage = file.readPage(pid);
+//                page_map.put(pid, originPage);
+//            }
+//        }
+//    }
 
-            //dirty because of this aborted transaction, we need to read those pages back from disk
-            if (page.isDirty() == tid) {
-                int tableId = pid.getTableId();
-                DbFile file = Database.getCatalog().getDatabaseFile(tableId);
-                Page originPage = file.readPage(pid);
-                page_map.put(pid, originPage);
-            }
-        }
+    public synchronized void restorePage(Page page){
+        page_map.put(page.getId(), page);
     }
 }
